@@ -34,6 +34,11 @@ class Settings(BaseSettings):
 
     POSTGRES_URL: PostgresDsn
 
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = 'HS256'
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int
+
     CLICKHOUSE_URL: ClickHouseDsn
 
     DRAMATIQ_BROKER_REDIS_URL: RedisDsn

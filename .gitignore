@@ -13,6 +13,7 @@
 .complexipy_cache/
 
 .env
+.env.docker
 /src/staticfiles
 /src/mediafiles
 /src/config/.env

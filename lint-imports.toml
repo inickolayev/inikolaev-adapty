@@ -10,6 +10,7 @@ name = "Context independence (contexts must not import from each other)"
 type = "independence"
 modules = [
     "app.probe_context",
+    "app.auth_context",
 ]
 ignore_imports = [
      "**.infrastructure.** -> **",
@@ -21,6 +22,7 @@ name = "Domain layer purity (domain must not import from fastapi, dramatiq and r
 type = "forbidden"
 source_modules = [
     "app.probe_context",
+    "app.auth_context",
 ]
 forbidden_modules = [
     "fastapi",
@@ -43,6 +45,7 @@ name = "Layers contract"
 type = "layers"
 containers = [
     "app.probe_context",
+    "app.auth_context",
 ]
 layers = [
     "infrastructure.ports",
