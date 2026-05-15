@@ -1,8 +1,8 @@
 [project]
-name = "project-name"
+name = "inikolaev-adapty"
 description = ""
 version = "1.0.0"
-authors = [{ name = "davyddd" }]
+authors = [{ name = "Igor Nikolaev" }]
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "uvicorn[standard]==0.32.0",
