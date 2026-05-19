@@ -18,3 +18,4 @@ class LoginDTO(DataTransferObject):
 class UserDTO(DataTransferObject):
     user_id: UUID
     email: EmailStr
+    is_email_confirmed: bool

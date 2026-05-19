@@ -14,3 +14,8 @@ class InvalidCredentialsError(BaseError):
 class UserNotFoundError(BaseError):
     status_code: int = 404
     message: str = 'User not found'
+
+
+class EmailNotConfirmedError(BaseError):
+    status_code: int = 403
+    message: str = 'Email is not confirmed'

@@ -10,7 +10,7 @@ from app.auth_context.infrastructure.models.user import UserModel
 
 
 class UserRepository(Repository):
-    EXTERNAL_ALLOWED_METHODS: set[str] | None = {'exists'}
+    EXTERNAL_ALLOWED_METHODS: set[str] | None = {'exists', 'confirm_email'}
 
     @staticmethod
     async def get(user_id: UserId) -> User | None:
@@ -45,11 +45,19 @@ class UserRepository(Repository):
             await session.execute(statement)
 
     @staticmethod
+    async def confirm_email(user_id: UserId) -> None:
+        async with Atomic() as session:
+            statement = (
+                update(UserModel)
+                .where(col(UserModel.user_id) == user_id, col(UserModel.deleted_at).is_(None))
+                .values(is_email_confirmed=True, email_confirmed_at=utc_now())
+            )
+            await session.execute(statement)
+
+    @staticmethod
     async def exists(email: str) -> bool:
         async with Atomic() as session:
-            statement = select(col(UserModel.user_id)).where(
-                col(UserModel.email) == email, col(UserModel.deleted_at).is_(None)
-            )
+            statement = select(col(UserModel.user_id)).where(col(UserModel.email) == email, col(UserModel.deleted_at).is_(None))
             return (await session.exec(statement)).first() is not None
 
 
