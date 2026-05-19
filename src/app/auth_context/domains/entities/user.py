@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Self
 
 from pydantic import EmailStr, Field
@@ -14,6 +15,8 @@ class User(Entity):
     user_id: UserId = Field(default_factory=UserId)
     email: EmailStr
     password_hash: str
+    is_email_confirmed: bool = False
+    email_confirmed_at: datetime | None = None
 
     @classmethod
     def factory(cls, email: EmailStr, password_hash: str) -> Self:

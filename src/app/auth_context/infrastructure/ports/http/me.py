@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.get('/', summary='Get the current authenticated user')
 async def user_get(current_user: Annotated[User, Depends(get_current_user)]) -> UserDTO:
-    return UserDTO(user_id=current_user.user_id, email=current_user.email)
+    return UserDTO(user_id=current_user.user_id, email=current_user.email, is_email_confirmed=current_user.is_email_confirmed)
 
 
 @router.delete('/', status_code=status.HTTP_204_NO_CONTENT, summary='Soft-delete the current user account')

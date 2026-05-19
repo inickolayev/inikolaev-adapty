@@ -10,12 +10,18 @@ from config.settings import settings
 from share.security.jwt import decode_token, encode_token
 from share.security.password import hash_password, verify_password
 
+from app.auth_context.applications.email_confirmation import EmailConfirmationApp, email_confirmation_app_impl
 from app.auth_context.applications.refresh_token import TOKEN_TYPE_REFRESH, RefreshTokenApp, refresh_token_app_impl
 from app.auth_context.domains.dto.token import TokenPairDTO
 from app.auth_context.domains.dto.user import LoginDTO, RegisterDTO
 from app.auth_context.domains.entities.user import User, UserId
 from app.auth_context.domains.errors.token import InvalidTokenError, RefreshTokenRevokedError, TokenExpiredError
-from app.auth_context.domains.errors.user import InvalidCredentialsError, UserAlreadyExistsError, UserNotFoundError
+from app.auth_context.domains.errors.user import (
+    EmailNotConfirmedError,
+    InvalidCredentialsError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from app.auth_context.infrastructure.repositories.user import UserRepository, user_repository_impl
 
 TOKEN_TYPE_ACCESS = 'access'
@@ -24,18 +30,27 @@ TOKEN_TYPE_ACCESS = 'access'
 class UserApp(Application):
     repo: UserRepository = user_repository_impl
     refresh_token_app: RefreshTokenApp = refresh_token_app_impl
+    email_confirmation_app: EmailConfirmationApp = email_confirmation_app_impl
 
     async def register(self, data: RegisterDTO) -> User:
         if await self.repo.exists(email=data.email):
             raise UserAlreadyExistsError()
 
-        user = User.factory(email=data.email, password_hash=hash_password(data.password))
-        return await self.repo.create(user)
+        user = await self.repo.create(User.factory(email=data.email, password_hash=hash_password(data.password)))
+        await self.email_confirmation_app.issue(user_id=str(user.user_id), email=user.email)
+        return user
+
+    async def confirm_email(self, token: str) -> User:
+        user_id = UserId(await self.email_confirmation_app.confirm(token))
+        await self.repo.confirm_email(user_id)
+        return await self.get(user_id)
 
     async def login(self, data: LoginDTO) -> TokenPairDTO:
         user = await self.repo.get_by_filters(email=data.email)
         if user is None or not verify_password(data.password, user.password_hash):
             raise InvalidCredentialsError()
+        if not user.is_email_confirmed:
+            raise EmailNotConfirmedError()
 
         return await self._issue_pair(str(user.user_id))
 
