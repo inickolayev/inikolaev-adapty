@@ -11,10 +11,13 @@ from share.security.jwt import decode_token, encode_token
 from share.security.password import hash_password, verify_password
 
 from app.auth_context.applications.email_confirmation import EmailConfirmationApp, email_confirmation_app_impl
+from app.auth_context.applications.password_reset import PasswordResetApp, password_reset_app_impl
 from app.auth_context.applications.refresh_token import TOKEN_TYPE_REFRESH, RefreshTokenApp, refresh_token_app_impl
+from app.auth_context.domains.dto.password import PasswordResetConfirmDTO, PasswordResetRequestDTO
 from app.auth_context.domains.dto.token import TokenPairDTO
-from app.auth_context.domains.dto.user import LoginDTO, RegisterDTO
+from app.auth_context.domains.dto.user import ChangeEmailDTO, LoginDTO, RegisterDTO
 from app.auth_context.domains.entities.user import User, UserId
+from app.auth_context.domains.errors.password_reset import InvalidResetCodeError
 from app.auth_context.domains.errors.token import InvalidTokenError, RefreshTokenRevokedError, TokenExpiredError
 from app.auth_context.domains.errors.user import (
     EmailNotConfirmedError,
@@ -31,6 +34,7 @@ class UserApp(Application):
     repo: UserRepository = user_repository_impl
     refresh_token_app: RefreshTokenApp = refresh_token_app_impl
     email_confirmation_app: EmailConfirmationApp = email_confirmation_app_impl
+    password_reset_app: PasswordResetApp = password_reset_app_impl
 
     async def register(self, data: RegisterDTO) -> User:
         if await self.repo.exists(email=data.email):
@@ -43,6 +47,27 @@ class UserApp(Application):
     async def confirm_email(self, token: str) -> User:
         user_id = UserId(await self.email_confirmation_app.confirm(token))
         await self.repo.confirm_email(user_id)
+        return await self.get(user_id)
+
+    async def request_password_reset(self, data: PasswordResetRequestDTO) -> None:
+        user = await self.repo.get_by_filters(email=data.email)
+        if user is not None:
+            await self.password_reset_app.issue(data.email)
+
+    async def reset_password(self, data: PasswordResetConfirmDTO) -> None:
+        await self.password_reset_app.verify_and_consume(email=data.email, code=data.code)
+        user = await self.repo.get_by_filters(email=data.email)
+        if user is None:
+            raise InvalidResetCodeError()
+        await self.repo.update_password(user.user_id, hash_password(data.new_password))
+        await self.refresh_token_app.revoke_all(user_id=str(user.user_id))
+
+    async def change_email(self, user_id: UserId, data: ChangeEmailDTO) -> User:
+        user = await self.get(user_id)
+        if data.new_email == user.email or await self.repo.exists(email=data.new_email):
+            raise UserAlreadyExistsError()
+        await self.repo.change_email(user_id, data.new_email)
+        await self.email_confirmation_app.issue(user_id=str(user_id), email=data.new_email)
         return await self.get(user_id)
 
     async def login(self, data: LoginDTO) -> TokenPairDTO:

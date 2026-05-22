@@ -15,6 +15,10 @@ class LoginDTO(DataTransferObject):
     password: str
 
 
+class ChangeEmailDTO(DataTransferObject):
+    new_email: EmailStr
+
+
 class UserDTO(DataTransferObject):
     user_id: UUID
     email: EmailStr
