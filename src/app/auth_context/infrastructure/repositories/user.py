@@ -10,7 +10,7 @@ from app.auth_context.infrastructure.models.user import UserModel
 
 
 class UserRepository(Repository):
-    EXTERNAL_ALLOWED_METHODS: set[str] | None = {'exists', 'confirm_email'}
+    EXTERNAL_ALLOWED_METHODS: set[str] | None = {'exists', 'confirm_email', 'update_password', 'change_email'}
 
     @staticmethod
     async def get(user_id: UserId) -> User | None:
@@ -51,6 +51,26 @@ class UserRepository(Repository):
                 update(UserModel)
                 .where(col(UserModel.user_id) == user_id, col(UserModel.deleted_at).is_(None))
                 .values(is_email_confirmed=True, email_confirmed_at=utc_now())
+            )
+            await session.execute(statement)
+
+    @staticmethod
+    async def update_password(user_id: UserId, password_hash: str) -> None:
+        async with Atomic() as session:
+            statement = (
+                update(UserModel)
+                .where(col(UserModel.user_id) == user_id, col(UserModel.deleted_at).is_(None))
+                .values(password_hash=password_hash)
+            )
+            await session.execute(statement)
+
+    @staticmethod
+    async def change_email(user_id: UserId, new_email: str) -> None:
+        async with Atomic() as session:
+            statement = (
+                update(UserModel)
+                .where(col(UserModel.user_id) == user_id, col(UserModel.deleted_at).is_(None))
+                .values(email=new_email, is_email_confirmed=False, email_confirmed_at=None)
             )
             await session.execute(statement)
 
